@@ -10,7 +10,7 @@ use serde::{de::DeserializeOwned, Serialize};
 #[derive(Debug)]
 pub struct ConfigManager<S> {
     path: PathBuf,
-    settings: S,
+    data: S,
 }
 
 impl<S> ConfigManager<S> {
@@ -20,7 +20,7 @@ impl<S> ConfigManager<S> {
     {
         let path = path.as_ref();
 
-        let settings = if !path.exists() {
+        let data = if !path.exists() {
             S::default()
         } else {
             match deserialize(&path) {
@@ -34,21 +34,21 @@ impl<S> ConfigManager<S> {
 
         ConfigManager {
             path: path.to_path_buf(),
-            settings,
+            data,
         }
     }
 
-    pub fn settings(&self) -> &S {
-        &self.settings
+    pub fn data(&self) -> &S {
+        &self.data
     }
 
     pub fn update(&mut self, mut f: impl FnMut(&mut S))
     where
         S: Serialize,
     {
-        f(&mut self.settings);
+        f(&mut self.data);
 
-        if let Err(e) = serialize(&self.path, &self.settings) {
+        if let Err(e) = serialize(&self.path, &self.data) {
             error!("{e}");
         }
     }
@@ -57,7 +57,7 @@ impl<S> ConfigManager<S> {
     where
         S: DeserializeOwned,
     {
-        self.settings = deserialize(&self.path)?;
+        self.data = deserialize(&self.path)?;
         Ok(())
     }
 }
