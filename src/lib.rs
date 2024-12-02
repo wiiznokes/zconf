@@ -3,6 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use anyhow::bail;
 use log::error;
 use serde::{de::DeserializeOwned, Serialize};
 
@@ -79,6 +80,13 @@ fn serialize<T: Serialize>(path: &Path, rust_struct: &T) -> anyhow::Result<()> {
 
     #[cfg(feature = "json")]
     let str = json::to_string_pretty(rust_struct)?;
+
+    match path.parent() {
+        Some(parent) => {
+            fs::create_dir_all(parent)?;
+        }
+        None => bail!("no parent"),
+    }
 
     fs::write(path, str)?;
     Ok(())
