@@ -42,7 +42,7 @@ impl<S> ConfigManager<S> {
         &self.data
     }
 
-    pub fn update(&mut self, mut f: impl FnMut(&mut S))
+    pub fn update(&mut self, f: impl FnOnce(&mut S))
     where
         S: Serialize,
     {
