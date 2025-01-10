@@ -53,6 +53,11 @@ impl<S> ConfigManager<S> {
         }
     }
 
+    pub fn update_without_write(&mut self, f: impl FnOnce(&mut S))
+    {
+        f(&mut self.data);
+    }
+
     pub fn reload(&mut self) -> anyhow::Result<()>
     where
         S: DeserializeOwned,
