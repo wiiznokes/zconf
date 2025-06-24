@@ -5,7 +5,7 @@ use std::{
 
 use anyhow::bail;
 use log::error;
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 
 #[derive(Debug)]
 pub struct ConfigManager<S> {
@@ -23,7 +23,7 @@ impl<S> ConfigManager<S> {
         let data = if !path.exists() {
             S::default()
         } else {
-            match deserialize(&path) {
+            match deserialize(path) {
                 Ok(settings) => settings,
                 Err(e) => {
                     error!("can't deserialize settings {e}");
@@ -53,8 +53,7 @@ impl<S> ConfigManager<S> {
         }
     }
 
-    pub fn update_without_write(&mut self, f: impl FnOnce(&mut S))
-    {
+    pub fn update_without_write(&mut self, f: impl FnOnce(&mut S)) {
         f(&mut self.data);
     }
 
@@ -64,6 +63,21 @@ impl<S> ConfigManager<S> {
     {
         self.data = deserialize(&self.path)?;
         Ok(())
+    }
+
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
+    pub fn change_path(&mut self, new_path: impl Into<PathBuf>)
+    where
+        S: Serialize,
+    {
+        self.path = new_path.into();
+
+        if let Err(e) = serialize(&self.path, &self.data) {
+            error!("{e}");
+        }
     }
 }
 
