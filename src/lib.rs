@@ -1,11 +1,16 @@
 use std::{
     fs,
+    io::Write,
     path::{Path, PathBuf},
 };
 
 use anyhow::bail;
+use atomicwrites::{AtomicFile, OverwriteBehavior::AllowOverwrite};
 use log::error;
 use serde::{Serialize, de::DeserializeOwned};
+
+#[cfg(test)]
+mod test;
 
 #[derive(Debug)]
 pub struct ConfigManager<S> {
@@ -107,6 +112,8 @@ fn serialize<T: Serialize>(path: &Path, rust_struct: &T) -> anyhow::Result<()> {
         None => bail!("no parent"),
     }
 
-    fs::write(path, str)?;
+    let af = AtomicFile::new(path, AllowOverwrite);
+    af.write(|f| f.write_all(str.as_bytes()))?;
+
     Ok(())
 }
