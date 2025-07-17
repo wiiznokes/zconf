@@ -1,6 +1,7 @@
 use std::{
     fs,
     io::Write,
+    marker::PhantomData,
     path::{Path, PathBuf},
 };
 
@@ -12,14 +13,30 @@ use serde::{Serialize, de::DeserializeOwned};
 #[cfg(test)]
 mod test;
 
-#[derive(Debug)]
-pub struct ConfigManager<S> {
-    path: PathBuf,
-    data: S,
+/// Trait for serialization and deserialization of configuration data.
+/// This trait allows the `ConfigManager` to work with different serialization formats like JSON or TOML.
+pub trait SerdeAdapter<S> {
+    fn serialize(data: &S) -> anyhow::Result<Box<[u8]>>
+    where
+        S: Serialize;
+    fn deserialize(data: &[u8]) -> anyhow::Result<S>
+    where
+        S: DeserializeOwned;
 }
 
-impl<S> ConfigManager<S> {
-    pub fn new<P: AsRef<Path>>(path: P) -> ConfigManager<S>
+#[derive(Debug)]
+pub struct ConfigManager<S, SA: SerdeAdapter<S>> {
+    path: PathBuf,
+    data: S,
+    _sa: PhantomData<SA>,
+}
+
+impl<S, SA> ConfigManager<S, SA>
+where
+    S: Serialize + DeserializeOwned,
+    SA: SerdeAdapter<S>,
+{
+    pub fn new<P: AsRef<Path>>(path: P) -> ConfigManager<S, SA>
     where
         S: Default + DeserializeOwned + Serialize,
     {
@@ -28,7 +45,7 @@ impl<S> ConfigManager<S> {
         let data = if !path.exists() {
             S::default()
         } else {
-            match deserialize(path) {
+            match Self::deserialize(path) {
                 Ok(settings) => settings,
                 Err(e) => {
                     error!("can't deserialize settings {e}");
@@ -40,6 +57,7 @@ impl<S> ConfigManager<S> {
         ConfigManager {
             path: path.to_path_buf(),
             data,
+            _sa: PhantomData,
         }
     }
 
@@ -53,7 +71,7 @@ impl<S> ConfigManager<S> {
     {
         f(&mut self.data);
 
-        if let Err(e) = serialize(&self.path, &self.data) {
+        if let Err(e) = Self::serialize(&self.path, &self.data) {
             error!("{e}");
         }
     }
@@ -66,7 +84,7 @@ impl<S> ConfigManager<S> {
     where
         S: DeserializeOwned,
     {
-        self.data = deserialize(&self.path)?;
+        self.data = Self::deserialize(&self.path)?;
         Ok(())
     }
 
@@ -80,40 +98,64 @@ impl<S> ConfigManager<S> {
     {
         self.path = new_path.into();
 
-        if let Err(e) = serialize(&self.path, &self.data) {
+        if let Err(e) = Self::serialize(&self.path, &self.data) {
             error!("{e}");
         }
     }
-}
 
-fn deserialize<T: DeserializeOwned>(path: &Path) -> anyhow::Result<T> {
-    let str = fs::read_to_string(path)?;
+    fn deserialize(path: &Path) -> anyhow::Result<S> {
+        let data = fs::read(path)?;
 
-    #[cfg(feature = "toml")]
-    let t = toml::from_str(&str)?;
+        let t = SA::deserialize(&data)?;
 
-    #[cfg(feature = "json")]
-    let t = json::from_str(&str)?;
-
-    Ok(t)
-}
-
-fn serialize<T: Serialize>(path: &Path, rust_struct: &T) -> anyhow::Result<()> {
-    #[cfg(feature = "toml")]
-    let str = toml::to_string_pretty(rust_struct)?;
-
-    #[cfg(feature = "json")]
-    let str = json::to_string_pretty(rust_struct)?;
-
-    match path.parent() {
-        Some(parent) => {
-            fs::create_dir_all(parent)?;
-        }
-        None => bail!("no parent"),
+        Ok(t)
     }
 
-    let af = AtomicFile::new(path, AllowOverwrite);
-    af.write(|f| f.write_all(str.as_bytes()))?;
+    fn serialize(path: &Path, rust_struct: &S) -> anyhow::Result<()> {
+        let data = SA::serialize(rust_struct)?;
 
-    Ok(())
+        match path.parent() {
+            Some(parent) => {
+                fs::create_dir_all(parent)?;
+            }
+            None => bail!("no parent"),
+        }
+
+        let af = AtomicFile::new(path, AllowOverwrite);
+        af.write(|f| f.write_all(&data))?;
+
+        Ok(())
+    }
+}
+
+#[cfg(feature = "json")]
+pub struct Json;
+
+#[cfg(feature = "json")]
+impl<S: Serialize + DeserializeOwned> SerdeAdapter<S> for Json {
+    fn serialize(data: &S) -> anyhow::Result<Box<[u8]>> {
+        Ok(serde_json::to_string_pretty(data)?
+            .into_bytes()
+            .into_boxed_slice())
+    }
+
+    fn deserialize(data: &[u8]) -> anyhow::Result<S> {
+        Ok(serde_json::from_slice(data)?)
+    }
+}
+
+#[cfg(feature = "toml")]
+pub struct Toml;
+
+#[cfg(feature = "toml")]
+impl<S: Serialize + DeserializeOwned> SerdeAdapter<S> for Toml {
+    fn serialize(data: &S) -> anyhow::Result<Box<[u8]>> {
+        Ok(toml::to_string_pretty(data)?
+            .into_bytes()
+            .into_boxed_slice())
+    }
+
+    fn deserialize(data: &[u8]) -> anyhow::Result<S> {
+        Ok(toml::from_slice(data)?)
+    }
 }

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::ConfigManager;
+use crate::{ConfigManager, Toml};
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 struct Config {
@@ -10,7 +10,7 @@ struct Config {
 
 #[test]
 fn write() {
-    let mut config: ConfigManager<Config> = ConfigManager::new("test/test1.toml");
+    let mut config: ConfigManager<Config, Toml> = ConfigManager::new("test/test1.toml");
 
     config.update(|c| {
         c.active = true;
@@ -19,8 +19,8 @@ fn write() {
 
 #[test]
 fn read() {
-    let config: ConfigManager<Config> = ConfigManager::new("test_static/test1.toml");
+    let config: ConfigManager<Config, Toml> = ConfigManager::new("test_static/test1.toml");
 
-    assert_eq!(config.data().active, true);
+    assert!(config.data().active);
     assert_eq!(config.data().name, "test_read");
 }

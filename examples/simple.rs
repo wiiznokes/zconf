@@ -20,7 +20,7 @@ impl Default for Settings {
 fn main() {
     let path = PathBuf::from("settings.toml");
 
-    let mut config_manager = ConfigManager::<Settings>::new(&path);
+    let mut config_manager = ConfigManager::<Settings, zconf::Toml>::new(&path);
 
     config_manager.update(|settings| {
         settings.name = "Example".to_string();
