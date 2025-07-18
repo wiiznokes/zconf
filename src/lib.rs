@@ -1,4 +1,7 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg_hide))]
+#![cfg_attr(docsrs, doc(cfg_hide(doc)))]
 
 //! A configuration manager that handles reading, writing, and watching configuration files.
 //! It supports different serialization formats through the [`SerdeAdapter`] trait.
@@ -161,7 +164,6 @@ where
 
     /// Watch this config path for change. The `callback` will be called on each change.
     #[cfg(feature = "watcher")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "watcher")))]
     pub fn watch<F>(&mut self, mut callback: F) -> anyhow::Result<()>
     where
         F: FnMut() + Send + 'static,
@@ -211,7 +213,6 @@ where
 
 /// JSON serialization adapter for the [`ConfigManager`].
 #[cfg(feature = "json")]
-#[cfg_attr(docsrs, doc(cfg(feature = "json")))]
 pub struct Json;
 
 #[cfg(feature = "json")]
@@ -229,7 +230,6 @@ impl<S: Serialize + DeserializeOwned> SerdeAdapter<S> for Json {
 
 /// Toml serialization adapter for the [`ConfigManager`].
 #[cfg(feature = "toml")]
-#[cfg_attr(docsrs, doc(cfg(feature = "toml")))]
 pub struct Toml;
 
 #[cfg(feature = "toml")]
