@@ -31,7 +31,7 @@ pub trait SerdeAdapter<S> {
 }
 
 #[derive(Debug)]
-pub struct ConfigManager<S, SA: SerdeAdapter<S>> {
+pub struct ConfigManager<S, SA> {
     path: PathBuf,
     data: S,
     #[cfg(feature = "watcher")]
@@ -84,10 +84,7 @@ where
         &self.data
     }
 
-    pub fn update(&mut self, f: impl FnOnce(&mut S))
-    where
-        S: Serialize,
-    {
+    pub fn update(&mut self, f: impl FnOnce(&mut S)) {
         f(&mut self.data);
 
         if let Err(e) = Self::serialize(&self.path, &self.data) {
@@ -95,10 +92,7 @@ where
         }
     }
 
-    pub fn update_with_err(&mut self, f: impl FnOnce(&mut S)) -> anyhow::Result<()>
-    where
-        S: Serialize,
-    {
+    pub fn update_with_err(&mut self, f: impl FnOnce(&mut S)) -> anyhow::Result<()> {
         f(&mut self.data);
         Self::serialize(&self.path, &self.data)?;
         Ok(())
@@ -108,20 +102,14 @@ where
         f(&mut self.data);
     }
 
-    pub fn reload(&mut self)
-    where
-        S: DeserializeOwned,
-    {
+    pub fn reload(&mut self) {
         match Self::deserialize(&self.path) {
             Ok(data) => self.data = data,
             Err(e) => error!("file: {}: {e}", self.path.display()),
         }
     }
 
-    pub fn reload_with_err(&mut self) -> anyhow::Result<()>
-    where
-        S: DeserializeOwned,
-    {
+    pub fn reload_with_err(&mut self) -> anyhow::Result<()> {
         self.data = Self::deserialize(&self.path)?;
         Ok(())
     }
