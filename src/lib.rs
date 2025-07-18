@@ -10,8 +10,15 @@ use atomicwrites::{AtomicFile, OverwriteBehavior::AllowOverwrite};
 use log::error;
 use serde::{Serialize, de::DeserializeOwned};
 
+#[allow(unused_imports)]
+#[macro_use]
+extern crate log;
+
 #[cfg(test)]
 mod test;
+
+#[cfg(feature = "watcher")]
+mod watcher;
 
 /// Trait for serialization and deserialization of configuration data.
 /// This trait allows the `ConfigManager` to work with different serialization formats like JSON or TOML.
@@ -28,6 +35,8 @@ pub trait SerdeAdapter<S> {
 pub struct ConfigManager<S, SA: SerdeAdapter<S>> {
     path: PathBuf,
     data: S,
+    #[cfg(feature = "watcher")]
+    watcher: Option<notify::RecommendedWatcher>,
     _sa: PhantomData<SA>,
 }
 
@@ -57,6 +66,8 @@ where
         ConfigManager {
             path: path.to_path_buf(),
             data,
+            #[cfg(feature = "watcher")]
+            watcher: None,
             _sa: PhantomData,
         }
     }
@@ -90,17 +101,6 @@ where
 
     pub fn path(&self) -> &Path {
         &self.path
-    }
-
-    pub fn change_path(&mut self, new_path: impl Into<PathBuf>)
-    where
-        S: Serialize,
-    {
-        self.path = new_path.into();
-
-        if let Err(e) = Self::serialize(&self.path, &self.data) {
-            error!("{e}");
-        }
     }
 
     fn deserialize(path: &Path) -> anyhow::Result<S> {

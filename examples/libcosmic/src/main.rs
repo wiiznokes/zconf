@@ -1,13 +1,26 @@
 use cosmic::{
     Core, Element,
     app::{Settings, Task},
-    iced::{Length, alignment},
+    iced::{
+        Length, Subscription, alignment,
+        futures::{
+            SinkExt, Stream, StreamExt,
+            channel::mpsc::{self},
+            executor::block_on,
+            future::pending,
+        },
+    },
     widget::{button, row, text},
 };
 use serde::{Deserialize, Serialize};
 use zconf::ConfigManager;
 
+#[macro_use]
+extern crate log;
+
 fn main() {
+    env_logger::init();
+
     cosmic::app::run::<AppState>(Settings::default(), ()).unwrap();
 }
 
@@ -24,6 +37,8 @@ struct AppState {
 #[derive(Debug, Clone)]
 enum AppMsg {
     Update,
+    ConfigWasUpdated,
+    Listening(mpsc::Sender<ConfigSubEvent>),
 }
 
 impl cosmic::Application for AppState {
@@ -55,6 +70,20 @@ impl cosmic::Application for AppState {
                     config.active = !config.active;
                 });
             }
+            AppMsg::ConfigWasUpdated => {
+                if let Err(e) = self.config.reload() {
+                    error!("{e}");
+                }
+            }
+            AppMsg::Listening(mut sender) => {
+                println!("listening");
+
+                if let Err(e) = self.config.watch(move || {
+                    let _ = block_on(sender.send(ConfigSubEvent::Main));
+                }) {
+                    error!("{e}")
+                }
+            }
         }
 
         Task::none()
@@ -68,4 +97,31 @@ impl cosmic::Application for AppState {
             .push(text(format!("{:?}", self.config.data())))
             .into()
     }
+
+    fn subscription(&self) -> Subscription<Self::Message> {
+        cosmic::iced::Subscription::run(stream)
+    }
+}
+
+enum ConfigSubEvent {
+    Main,
+}
+
+fn stream() -> impl Stream<Item = AppMsg> {
+    cosmic::iced::stream::channel(100, move |mut output| async move {
+        let (tx, mut rx) = mpsc::channel::<ConfigSubEvent>(100);
+
+        let _ = output.send(AppMsg::Listening(tx)).await;
+
+        loop {
+            match rx.next().await {
+                Some(e) => match e {
+                    ConfigSubEvent::Main => {
+                        let _ = output.send(AppMsg::ConfigWasUpdated).await;
+                    }
+                },
+                None => pending().await,
+            }
+        }
+    })
 }
