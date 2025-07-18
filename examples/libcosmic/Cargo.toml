@@ -1,0 +1,13 @@
+[package]
+name = "libcosmic_app"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+zconf = { path = "../.." }
+libcosmic = { git = "https://github.com/pop-os/libcosmic.git", default-features = false, features = [
+    "winit",
+] }
+serde = { version = "1", features = ["derive"] }
+log = "0.4"
+env_logger = "0.11"
