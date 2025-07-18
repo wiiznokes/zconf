@@ -2,19 +2,10 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use zconf::ConfigManager;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 struct Settings {
     name: String,
     value: i32,
-}
-
-impl Default for Settings {
-    fn default() -> Self {
-        Settings {
-            name: "default".to_string(),
-            value: 0,
-        }
-    }
 }
 
 fn main() {
