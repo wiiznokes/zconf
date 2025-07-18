@@ -20,7 +20,7 @@ extern crate log;
 mod test;
 
 /// Trait for serialization and deserialization of configuration data.
-/// This trait allows the `ConfigManager` to work with different serialization formats like JSON or TOML.
+/// This trait allows the [`ConfigManager`] to work with different serialization formats like JSON or TOML.
 pub trait SerdeAdapter<S> {
     fn serialize(data: &S) -> anyhow::Result<Box<[u8]>>
     where
@@ -157,7 +157,7 @@ where
         Ok(())
     }
 
-    /// Watch this config path for change. The callback will be called on each change.
+    /// Watch this config path for change. The `callback` will be called on each change.
     #[cfg(feature = "watcher")]
     pub fn watch<F>(&mut self, mut callback: F) -> anyhow::Result<()>
     where
