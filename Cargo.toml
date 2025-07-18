@@ -28,3 +28,6 @@ notify = { version = "8", optional = true }
 
 [dev-dependencies]
 serde = { version = "1", features = ["derive"] }
+
+[package.metadata.docs.rs]
+all-features = true

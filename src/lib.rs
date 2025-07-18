@@ -27,6 +27,10 @@ pub trait SerdeAdapter<S> {
         S: DeserializeOwned;
 }
 
+/// A configuration manager that handles reading, writing, and watching configuration files.
+/// It supports different serialization formats through the [`SerdeAdapter`] trait.
+/// The configuration data is stored in a generic type `S`, which must implement [`Serialize`] and [`DeserializeOwned`].
+/// The `SA` type parameter is used to specify the serialization format, which must implement the [`SerdeAdapter`] trait.
 #[derive(Debug)]
 pub struct ConfigManager<S, SA> {
     path: PathBuf,
@@ -51,7 +55,7 @@ where
     }
 
     /// Create a new [`ConfigManager`] with the provided path. If the config can't be deserialized,
-    /// f will be used to create it.
+    /// `f` will be used to create it.
     pub fn with_fallback<F>(path: impl Into<PathBuf>, f: F) -> ConfigManager<S, SA>
     where
         F: FnOnce() -> S + 'static,
