@@ -44,20 +44,29 @@ where
     S: Serialize + DeserializeOwned,
     SA: SerdeAdapter<S>,
 {
-    pub fn new<P: AsRef<Path>>(path: P) -> ConfigManager<S, SA>
+    pub fn new(path: impl Into<PathBuf>) -> ConfigManager<S, SA>
     where
-        S: Default + DeserializeOwned + Serialize,
+        S: Default,
     {
-        let path = path.as_ref();
+        Self::inner_new(path.into(), Box::new(|| S::default()))
+    }
 
+    pub fn with_fallback<F>(path: impl Into<PathBuf>, f: F) -> ConfigManager<S, SA>
+    where
+        F: FnOnce() -> S + 'static,
+    {
+        Self::inner_new(path.into(), Box::new(f))
+    }
+
+    fn inner_new(path: PathBuf, default: Box<dyn FnOnce() -> S>) -> ConfigManager<S, SA> {
         let data = if !path.exists() {
-            S::default()
+            default()
         } else {
-            match Self::deserialize(path) {
+            match Self::deserialize(&path) {
                 Ok(settings) => settings,
                 Err(e) => {
                     error!("can't deserialize settings {e}");
-                    S::default()
+                    default()
                 }
             }
         };
