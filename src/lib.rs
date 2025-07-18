@@ -206,6 +206,7 @@ where
     }
 }
 
+/// JSON serialization adapter for the [`ConfigManager`].
 #[cfg(feature = "json")]
 pub struct Json;
 
@@ -222,6 +223,7 @@ impl<S: Serialize + DeserializeOwned> SerdeAdapter<S> for Json {
     }
 }
 
+/// Toml serialization adapter for the [`ConfigManager`].
 #[cfg(feature = "toml")]
 pub struct Toml;
 
