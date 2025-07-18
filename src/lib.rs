@@ -1,3 +1,6 @@
+//! A configuration manager that handles reading, writing, and watching configuration files.
+//! It supports different serialization formats through the [`SerdeAdapter`] trait.
+
 use std::{
     fs,
     io::Write,
