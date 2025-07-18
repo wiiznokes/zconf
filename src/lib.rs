@@ -95,6 +95,15 @@ where
         }
     }
 
+    pub fn update_with_err(&mut self, f: impl FnOnce(&mut S)) -> anyhow::Result<()>
+    where
+        S: Serialize,
+    {
+        f(&mut self.data);
+        Self::serialize(&self.path, &self.data)?;
+        Ok(())
+    }
+
     pub fn update_without_write(&mut self, f: impl FnOnce(&mut S)) {
         f(&mut self.data);
     }
@@ -105,8 +114,16 @@ where
     {
         match Self::deserialize(&self.path) {
             Ok(data) => self.data = data,
-            Err(e) => error!("{e}"),
+            Err(e) => error!("file: {}: {e}", self.path.display()),
         }
+    }
+
+    pub fn reload_with_err(&mut self) -> anyhow::Result<()>
+    where
+        S: DeserializeOwned,
+    {
+        self.data = Self::deserialize(&self.path)?;
+        Ok(())
     }
 
     pub fn path(&self) -> &Path {
