@@ -4,7 +4,7 @@
 [![docs.rs](https://img.shields.io/badge/docs.rs-zconf-blue?style=flat-square&logo=docs.rs)](https://docs.rs/zconf)
 [![license](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](#license)
 
-Crate to manage configuration files
+Manage configuration files
 
 ## Usage
 
@@ -37,7 +37,7 @@ fn main() {
 
 In general, you will want to use a crate like [directories](https://crates.io/crates/directories) to get the path of the system config directory.
 
-## Goal / Vision
+## Goal / Vision
 
 - No macros (not that macros are always wrong, but they provide poor ide support and longer compile time)
 - config are contained in one file
@@ -47,4 +47,4 @@ In general, you will want to use a crate like [directories](https://crates.io/cr
 
 - Atomic file operation, using [atomicwrites](https://crates.io/crates/atomicwrites)
 - Watcher, using [notify](https://crates.io/crates/notify), see the [libcosmic example](./examples/libcosmic/)
-- Various format support (`toml` and `json` are integrated with feature flag, `toml` being the default one. Uou can also provide a custom format.)
+- Various format support (`toml` and `json` are integrated with feature flag, `toml` being the default one. You can also provide a custom format.)
