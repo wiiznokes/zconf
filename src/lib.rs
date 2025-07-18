@@ -7,7 +7,6 @@ use std::{
 
 use anyhow::bail;
 use atomicwrites::{AtomicFile, OverwriteBehavior::AllowOverwrite};
-use log::error;
 use serde::{Serialize, de::DeserializeOwned};
 
 #[allow(unused_imports)]
@@ -91,12 +90,14 @@ where
         f(&mut self.data);
     }
 
-    pub fn reload(&mut self) -> anyhow::Result<()>
+    pub fn reload(&mut self)
     where
         S: DeserializeOwned,
     {
-        self.data = Self::deserialize(&self.path)?;
-        Ok(())
+        match Self::deserialize(&self.path) {
+            Ok(data) => self.data = data,
+            Err(e) => error!("{e}"),
+        }
     }
 
     pub fn path(&self) -> &Path {

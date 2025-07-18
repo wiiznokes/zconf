@@ -80,9 +80,7 @@ impl cosmic::Application for AppState {
             }
             AppMsg::ConfigWasUpdated(config_type) => match config_type {
                 ConfigType::Main => {
-                    if let Err(e) = self.config.reload() {
-                        error!("{e}");
-                    }
+                    self.config.reload();
                 }
             },
             AppMsg::ConfigListening(mut sender) => {
