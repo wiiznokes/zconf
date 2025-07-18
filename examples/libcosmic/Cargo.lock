@@ -5051,7 +5051,6 @@ version = "0.1.3"
 dependencies = [
  "anyhow",
  "atomicwrites 0.4.4",
- "futures",
  "log",
  "notify",
  "serde",

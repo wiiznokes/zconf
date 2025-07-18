@@ -34,11 +34,19 @@ struct AppState {
     config: ConfigManager<Config, zconf::Toml>,
 }
 
+// in this case, there is one config, but you could add more
+#[derive(Debug, Clone)]
+enum ConfigType {
+    Main,
+}
+
 #[derive(Debug, Clone)]
 enum AppMsg {
     Update,
-    ConfigWasUpdated,
-    Listening(mpsc::Sender<ConfigSubEvent>),
+    // send when the subscription receive an update
+    ConfigWasUpdated(ConfigType),
+    // send when the subscription is ready to listen on a tokio mpsc
+    ConfigListening(mpsc::Sender<ConfigType>),
 }
 
 impl cosmic::Application for AppState {
@@ -70,16 +78,18 @@ impl cosmic::Application for AppState {
                     config.active = !config.active;
                 });
             }
-            AppMsg::ConfigWasUpdated => {
-                if let Err(e) = self.config.reload() {
-                    error!("{e}");
+            AppMsg::ConfigWasUpdated(config_type) => match config_type {
+                ConfigType::Main => {
+                    if let Err(e) = self.config.reload() {
+                        error!("{e}");
+                    }
                 }
-            }
-            AppMsg::Listening(mut sender) => {
+            },
+            AppMsg::ConfigListening(mut sender) => {
                 println!("listening");
 
                 if let Err(e) = self.config.watch(move || {
-                    let _ = block_on(sender.send(ConfigSubEvent::Main));
+                    let _ = block_on(sender.send(ConfigType::Main));
                 }) {
                     error!("{e}")
                 }
@@ -99,27 +109,21 @@ impl cosmic::Application for AppState {
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
-        cosmic::iced::Subscription::run(stream)
+        cosmic::iced::Subscription::run(config_watcher_subcription_adapter)
     }
 }
 
-enum ConfigSubEvent {
-    Main,
-}
-
-fn stream() -> impl Stream<Item = AppMsg> {
+fn config_watcher_subcription_adapter() -> impl Stream<Item = AppMsg> {
     cosmic::iced::stream::channel(100, move |mut output| async move {
-        let (tx, mut rx) = mpsc::channel::<ConfigSubEvent>(100);
+        let (tx, mut rx) = mpsc::channel::<ConfigType>(100);
 
-        let _ = output.send(AppMsg::Listening(tx)).await;
+        let _ = output.send(AppMsg::ConfigListening(tx)).await;
 
         loop {
             match rx.next().await {
-                Some(e) => match e {
-                    ConfigSubEvent::Main => {
-                        let _ = output.send(AppMsg::ConfigWasUpdated).await;
-                    }
-                },
+                Some(e) => {
+                    let _ = output.send(AppMsg::ConfigWasUpdated(e)).await;
+                }
                 None => pending().await,
             }
         }
