@@ -66,7 +66,7 @@ impl cosmic::Application for AppState {
     fn init(core: cosmic::Core, _flags: Self::Flags) -> (Self, Task<Self::Message>) {
         let app_state = AppState {
             core,
-            config: ConfigManager::new("config.toml"),
+            config: ConfigManager::with_fallback("config.toml", || Config { active: true }),
         };
         (app_state, Task::none())
     }
@@ -89,7 +89,7 @@ impl cosmic::Application for AppState {
                 if let Err(e) = self.config.watch(move || {
                     let _ = block_on(sender.send(ConfigType::Main));
                 }) {
-                    error!("{e}")
+                    error!("can't watch: {e}")
                 }
             }
         }
